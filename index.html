@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14000a">
+<title>Love You 💖</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%92%96%3C/text%3E%3C/svg%3E">
+<style>
+:root{color-scheme:dark}
+html,body{height:100%;margin:0;overflow:hidden;background:radial-gradient(circle at 50% 46%,#4a0a26 0%,#1f0412 50%,#07000a 100%)}
+canvas{display:block;width:100%;height:100%;touch-action:manipulation}
+.hint,.credit{position:fixed;left:0;right:0;text-align:center;pointer-events:none;font:12px/1 "Segoe UI",Arial,Helvetica,sans-serif;letter-spacing:.12em}
+.credit{bottom:0;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));color:rgba(255,160,200,.6)}
+.hint{bottom:calc(32px + env(safe-area-inset-bottom,0px));color:rgba(255,200,225,.75);transition:opacity .8s;animation:pulse 2s ease-in-out infinite}
+.hint.off{opacity:0;animation:none}
+@keyframes pulse{50%{transform:scale(1.06)}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hint" id="hint">ketuk layar, yaaa 💕</div>
+<div class="credit">HUMAI💖</div>
+<script>
+const CENTER_TEXT = "HUMAI", ROWS = 26, XSTRETCH = 1.1;
+const TONES = ["#ff2d55", "#ff5c8a", "#d90f3c", "#ff7eb3", "#ffc1da"];
+const POP = ["#ff2d55", "#ff6b9d", "#ff9ec4", "#e11d48", "#ffc1da"];
+const CFONT = '"Segoe Script","Brush Script MT","Snell Roundhand",cursive';
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let W, H, R, items, dpr, cSize, cW, parts = [];
+
+let seed = 5;
+const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+
+const cache = {};
+function sprite(text, size, tone) {
+  const k = text + size + tone;
+  if (cache[k]) return cache[k];
+  const font = `${size}px "Segoe UI", Arial, Helvetica, sans-serif`;
+  const m = document.createElement("canvas").getContext("2d");
+  m.font = font;
+  const tw = Math.ceil(m.measureText(text).width), pad = 2;
+  const c = document.createElement("canvas");
+  c.width = tw + pad * 2; c.height = Math.ceil(size * 1.3);
+  const g = c.getContext("2d");
+  g.font = font; g.textBaseline = "middle"; g.fillStyle = TONES[tone];
+  g.fillText(text, pad, c.height / 2);
+  return cache[k] = { c, tw };
+}
+
+const inside = (x, y) => Math.pow(x * x + y * y - 1, 3) - x * x * y * y * y <= 0;
+
+function heart(g, x, y, s) {
+  g.beginPath(); g.moveTo(x, y + s);
+  g.bezierCurveTo(x - s * 1.4, y - s * .2, x - s * .6, y - s, x, y - s * .35);
+  g.bezierCurveTo(x + s * .6, y - s, x + s * 1.4, y - s * .2, x, y + s);
+  g.closePath(); g.fill();
+}
+
+function build() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = cv.width = Math.round(innerWidth * dpr);
+  H = cv.height = Math.round(innerHeight * dpr);
+  for (const k in cache) delete cache[k];
+  seed = 5; items = [];
+  R = Math.min(W / (2.3 * XSTRETCH * 1.04), H / 2.4);
+  const rh = R * 2.3 / ROWS;
+
+  // "Love you" kecil dan manis di tengah
+  cSize = Math.round(R * 0.11);
+  const m = document.createElement("canvas").getContext("2d");
+  m.font = `${cSize}px ${CFONT}`;
+  cW = m.measureText(CENTER_TEXT).width;
+  const exW = cW / 2 + rh * 0.9, exH = cSize * 0.9;
+
+  let r = 0;
+  for (let py = -1.15 * R; py < 1.12 * R; py += rh, r++) {
+    const ny = -py / R + 0.1, segs = [];
+    let st = null;
+    for (let x = -1.4 * R; x <= 1.4 * R; x += 3) {
+      const ins = inside(x / (R * XSTRETCH), ny);
+      if (ins && st === null) st = x;
+      else if (!ins && st !== null) { segs.push([st, x]); st = null; }
+    }
+    const size = Math.max(7, Math.round(rh * [0.7, 0.82, 0.7, 0.9][r % 4]));
+    const upper = size >= rh * 0.8;
+    const rowPh = rnd() * 6.28, rowSp = 0.25 + rnd() * 0.25;
+    for (let [a, b] of segs) {
+      a += rh * 0.3; b -= rh * 0.3;
+      const row = []; let cur = a;
+      for (;;) {
+        let text = upper ? (rnd() < 0.7 ? "LOVE YOU" : "Love you") : (rnd() < 0.6 ? "love you" : "Love You");
+        let tone = rnd() < 0.14 ? 4 : [0, 0, 1, 2, 3][Math.floor(rnd() * 5)];
+        if (rnd() < 0.09) { text = "\u2665"; tone = rnd() < .5 ? 3 : 0; } // hati kecil selingan
+        const s = sprite(text, size, tone);
+        if (cur + s.tw > b) break;
+        row.push({ s, x0: cur }); cur += s.tw + rh * 0.4;
+      }
+      if (!row.length) continue;
+      const extra = (b - (cur - rh * 0.4)) / row.length;
+      row.forEach((o, i) => {
+        const x = o.x0 + o.s.tw / 2 + extra * (i + 0.5);
+        const dim = (Math.abs(py) < exH && Math.abs(x) - o.s.tw / 2 < exW) ? 0.12 : 1;
+        items.push({ s: o.s.c, x, y: py, amp: (still ? 0 : 3) * dpr, sp: rowSp, ph: rowPh, al: (0.78 + rnd() * 0.22) * dim });
+      });
+    }
+  }
+}
+
+function pop(x, y, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, v = (1.5 + Math.random() * 3.5) * dpr;
+    parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2 * dpr, g: 0.07 * dpr,
+      s: (5 + Math.random() * 9) * dpr, c: POP[i % POP.length], life: 1, d: 0.012 + Math.random() * 0.012, ph: 0, burst: true });
+  }
+}
+
+function frame(ms) {
+  const t = ms / 1000, cx = W / 2, cy = H / 2 - R * 0.02;
+  // detak jantung: lub-dub
+  const p = (t % 1.3) / 1.3;
+  const beat = still ? 0 : Math.exp(-Math.pow((p - .08) * 13, 2)) + .6 * Math.exp(-Math.pow((p - .28) * 13, 2));
+  const sc = 1 + 0.035 * beat;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // hati kecil melayang naik
+  if (!still && parts.length < 45 && Math.random() < 0.07)
+    parts.push({ x: Math.random() * W, y: H + 20 * dpr, vx: 0, vy: -(0.5 + Math.random() * 1.1) * dpr, g: 0,
+      s: (4 + Math.random() * 9) * dpr, c: POP[Math.floor(Math.random() * 5)], life: 0.5, d: 0, ph: Math.random() * 6.28, burst: false });
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const q = parts[i];
+    q.vy += q.g; q.x += q.vx + (q.burst ? 0 : Math.sin(t * 1.5 + q.ph) * 0.4 * dpr); q.y += q.vy; q.life -= q.d;
+    if (q.life <= 0 || q.y < -30 * dpr) { parts.splice(i, 1); continue; }
+    ctx.globalAlpha = Math.min(q.life, 1) * (q.burst ? 1 : 0.6);
+    ctx.fillStyle = q.c; heart(ctx, q.x, q.y, q.s);
+  }
+
+  // hati besar dari tulisan
+  const pos = ((t * 0.45) % 3.4) - 1.7; // kilau menyapu diagonal
+  for (const it of items) {
+    const k = (it.x + it.y * 1.4) / (R * 0.38);
+    const dx = it.amp * 1.6 * Math.sin(t * it.sp * 2 + it.ph) + it.amp * 0.8 * Math.sin(t * 1.4 + it.y / (R * 0.2));
+    const dy = it.amp * 1.1 * Math.sin(t * 2 + k);               // gelombang naik-turun
+    const u = (it.x + it.y) / (R * 1.5);
+    const band = still || it.al < 0.5 ? 0 : Math.exp(-Math.pow((u - pos) * 4.5, 2));
+    const tw = still ? 0 : 0.14 * Math.sin(t * 3.2 + it.ph * 5 + k * 0.6); // kerlap-kerlip
+    const z = 1 + 0.3 * band;                                     // membesar lucu saat disapu kilau
+    const w = it.s.width * z, h = it.s.height * z;
+    ctx.globalAlpha = Math.max(0, Math.min(1, it.al + tw + 0.5 * band));
+    ctx.drawImage(it.s, Math.round(cx + (it.x + dx) * sc - w / 2), Math.round(cy + (it.y + dy) * sc - h / 2), w, h);
+  }
+
+  // "Love you" kecil dengan glow lembut
+  ctx.save();
+  ctx.translate(cx, cy); ctx.scale(1 + 0.05 * beat, 1 + 0.05 * beat);
+  ctx.globalAlpha = 1; ctx.fillStyle = "#fff";
+  ctx.shadowColor = "#ff2d75"; ctx.shadowBlur = 14 * dpr;
+  ctx.font = `${cSize}px ${CFONT}`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(CENTER_TEXT, 0, 0);
+  ctx.shadowBlur = 0; ctx.fillStyle = "#ff6b9d";
+  heart(ctx, 0, -cSize * 0.95, cSize * 0.22);
+  ctx.restore();
+  ctx.globalAlpha = 1;
+
+  requestAnimationFrame(frame);
+}
+
+let rt;
+addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(build, 150); });
+cv.addEventListener("pointerdown", e => {
+  pop(e.clientX * dpr, e.clientY * dpr, 16);
+  document.getElementById("hint").classList.add("off");
+});
+build();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
